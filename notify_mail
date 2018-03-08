@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+# Simple script to check if there are unread e-mails on Mail and turn the lights on of the Circuit Python Express
+
+import subprocess
+import serial
+from time import sleep
+
+path = "/dev/tty.usbmodem1421"
+
+# Disable reset after hangup
+ser = serial.Serial(path, 38400,timeout = 1)
+
+def asrun(ascript):
+    "Run the given AppleScript and return the standard output and error."
+
+    osa = subprocess.Popen(['osascript', '-'],
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE)
+    return osa.communicate(ascript)[0]
+
+ser.flush()
+while True:
+    text = ser.read(1000)
+    
+    print text
+    if "output" in text or len(text) <2:
+        sleep(3)
+        print ("Now we start to grab things")
+        ser.write("d\n")
+        print (ser.read(500))
+        break
+applescript = '''
+	tell application "Mail"
+		set emails to unread count of inbox
+		delay 2
+	end tell
+'''
+clean = False
+while True:
+    text = "p"
+    unread = str(asrun(applescript))
+    if unread > 0:
+        if clean == False:
+            text = "s"
+            
+    elif unread == 0:
+        if clean == True:
+            text = "c"
+            clean = False
+        else:
+            text = "p"
+    ser.write(text+"\r\n".encode())
+    print(ser.read(500))
+    
+    
